@@ -1,10 +1,10 @@
 # coding: utf-8
 import os
-import pipes
-import subprocess
 import io
 import asyncio
+import asyncio.subprocess
 from pypeline.plugins.base import BaseAsyncPlugin
+from shlex import quote
 
 
 class LessPlugin(BaseAsyncPlugin):
@@ -19,11 +19,11 @@ class LessPlugin(BaseAsyncPlugin):
 
     @asyncio.coroutine
     def process_file(self, path, file):
-        source_path = pipes.quote('{}{}'.format(self.source_path, path))
-
-        proc = subprocess.Popen('lessc -s{} {}'.format(' -x' if self.compress else '', source_path),
-                                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        contents, err = proc.communicate()
+        source_path = quote('{}{}'.format(self.source_path, path))
+        proc = yield from asyncio.create_subprocess_shell(
+            'lessc -s{} {}'.format(' -x' if self.compress else '', source_path),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        contents, err = yield from proc.communicate()
 
         if err:
             raise Exception('Error in less processing:\n{}\n{}'.format(path, err.decode('utf-8')))
